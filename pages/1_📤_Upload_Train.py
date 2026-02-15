@@ -200,7 +200,29 @@ drive.mount("/content/drive")
 # =====================================
 # STEP 2: Install Dependencies
 # =====================================
-!pip install -q diffusers["training"] transformers accelerate peft safetensors
+!pip install -U transformers \accelerate \peft \safetensors 
+# =====================================
+# STEP 2.2: Install Dependencies
+# =====================================
+!git clone https://github.com/huggingface/diffusers
+
+# =====================================
+# STEP 2.3: Check GPU and Library Versions diffuser should be 0.37.0.dev0
+# =====================================
+import torch
+import diffusers
+import transformers
+import peft
+print(f"PyTorch version: {{torch.__version__}}")
+print(f"Diffusers version: {{diffusers.__version__}}")
+print(f"PEFT version: {{peft.__version__}}")
+print(f"CUDA available: {{torch.cuda.is_available()}}")
+
+if torch.cuda.is_available():
+    print(f"GPU: {{torch.cuda.get_device_name(0)}}")
+else:
+    print("Warning: No GPU detected. Training will be extremely slow.")
+    
 
 # =====================================
 # STEP 3: Extract Training Images
@@ -232,19 +254,16 @@ from huggingface_hub import login
 HF_TOKEN = "your_huggingface_token_here"  # ⚠️ REPLACE THIS
 login(token=HF_TOKEN)
 
-!git clone https://github.com/huggingface/diffusers.git
-# =====================================
-# STEP 5: Clone Diffusers & Train
-# =====================================
-!git clone https://github.com/huggingface/diffusers.git
+
+
 
 # =====================================
 # STEP 6: Training Configuration
 # =====================================
-INSTANCE_PROMPT = "a photo of bharat person"
+INSTANCE_PROMPT = "a photo of {trigger_word} person"
 OUTPUT_DIR = "/content/sdxl_lora"
 
-RESOLUTION = 1024
+RESOLUTION = 768
 BATCH_SIZE = 1
 GRAD_ACCUM = 4
 LR = 1e-4
@@ -253,12 +272,14 @@ MAX_STEPS = 800
 # =====================================
 # STEP 7: Start Training (WORKING COMMAND)
 # =====================================
-!accelerate launch /content/diffusers/examples/dreambooth/train_dreambooth_lora_sdxl.py \
-  --pretrained_model_name_or_path="stabilityai/stable-diffusion-xl-base-1.0" \
+
+!accelerate launch \
+  examples/dreambooth/train_dreambooth_lora_sdxl.py \
+  --pretrained_model_name_or_path stabilityai/stable-diffusion-xl-base-1.0 \
   --instance_data_dir="/content/training_images" \
   --output_dir="/content/sdxl_lora" \
-  --instance_prompt="a photo of bharat person" \
-  --resolution=1024 \
+  --instance_prompt="a photo of {trigger_word} person" \
+  --resolution=768 \
   --train_batch_size=1 \
   --gradient_accumulation_steps=4 \
   --learning_rate=1e-4 \
@@ -266,10 +287,10 @@ MAX_STEPS = 800
   --lr_warmup_steps=0 \
   --max_train_steps=800 \
   --checkpointing_steps=200 \
-  --mixed_precision="fp16" \
-  --seed=42
+  --mixed_precision="fp16"
+print("✅ Training complete!")
 
-print("✅ Training finished")
+
 
 # =====================================
 # STEP 6: Upload to Hugging Face Hub
